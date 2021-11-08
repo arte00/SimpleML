@@ -10,8 +10,13 @@ if __name__ == "__main__":
     print(x.evaluate())
     print(x.ratio())
     params = x.get_params()
-    item = []
-    x1 = PenOrRing(item, params, 0.2)
+    items2 = [[40, 10, "ring"], [0.5, 5, "pen"], [500, 10000, "pen"], [20, 5, "ring"]]
+    x1 = PenOrRing(items2, params, 0.2)
+
+    print(x1.network_cell(items2[0]))
+    print(x1.network_cell(items2[1]))
+    print(x1.network_cell(items2[2]))
+    print(x1.network_cell(items2[3]))
 
 
 
