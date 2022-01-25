@@ -80,7 +80,7 @@ def task1():
     m = 133
     X, y = datasets.make_blobs(n_samples=m, n_features=2,
                                centers=2, cluster_std=1.15,
-                               random_state=6)
+                               random_state=123)
 
     perceptron = Perceptron(learning_rate=0.1, n_iterations=1000)
 
