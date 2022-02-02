@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import knapsack
 
 
 def generate_knapsack_problem(n):
@@ -11,20 +12,19 @@ def generate_knapsack_problem(n):
     c = int(np.sum(w) * ran_c)
     return w, v, c
 
+def generate_travelling_salesman_problem(n):
+    pass
 
-def knapsack(W, wt, val, n):
 
+def knapsack_force(W, wt, val, n):
     if n == 0 or W == 0:
         return 0
 
     if wt[n - 1] > W:
-        return knapsack(W, wt, val, n - 1)
-
+        return knapsack_force(W, wt, val, n - 1)
     else:
         return max(
-            val[n - 1] + knapsack(
-                W - wt[n - 1], wt, val, n - 1),
-            knapsack(W, wt, val, n - 1))
+            val[n - 1] + knapsack_force(W - wt[n - 1], wt, val, n - 1), knapsack_force(W, wt, val, n - 1))
 
 
 def initialize(n: int, m: int):
@@ -48,20 +48,14 @@ def fitness_function(x, v, c):
     return fitness
 
 
-def fitness_function_heuristic(x, v, c):
-    fitness = 0
-    for i in range(len(x)):
-        fitness += v[i][0] * x[i] - (x[i] * v[i][1] - c) ** 2
-    return fitness
-
-
 def roulette_selection(genes, v, c):
     n = len(genes)
 
     genes_fitness = np.array([fitness_function(gene, v, c) for gene in genes])
     genes_fitness_sum = np.sum(genes_fitness)
     prob = [gene / genes_fitness_sum for gene in genes_fitness]
-
+    print("prob", prob)
+    print("prob2", np.sum(prob))
     new_population = np.array([genes[np.random.choice(n, p=prob)] for _ in range(n)])
 
     return new_population
@@ -149,7 +143,6 @@ def two_point_crossing(genes):
 
         second_child = np.append(np.array([second_parent[0:first_cross_point]]),
                                  np.array([first_parent[first_cross_point:second_cross_point]]))
-
         second_child = np.append(second_child, np.array([second_parent[second_cross_point:]]))
 
         new_population.append(first_child)
@@ -209,6 +202,8 @@ def genetic_algorithm(V, c, iterations, m, mutation_rate, selection, crossing):
 
         genes = mutation(genes, mutation_rate)
 
+        '''BEST GENES'''
+
         history.append(np.sum(fitness(genes, V, c)) / len(genes))
         top_genes.append(np.max(fitness(genes, V, c)))
 
@@ -257,27 +252,85 @@ def task1():
     # n = len(values)
     new_n = 20
     weights, values, c = generate_knapsack_problem(new_n)
-    m = 400
+    m = 10
     # c = 850
-    iterations = 25
-    mutation_prob = 0.001
+    iterations = 10
+    mutation_prob = 0.002
     V = [[values[i], weights[i]] for i in range(new_n)]
-    result, fitness, history, top, top_one = genetic_algorithm(V[0:20],
-                                                               c, iterations,
-                                                               m, mutation_prob,
-                                                               "tournament",
-                                                               "two_point")
-    print(fitness)
+
+    result, last_iteration, history, top, top_one = genetic_algorithm(V[0:20],
+                                                                      c, iterations,
+                                                                      m, mutation_prob,
+                                                                      "roulette",
+                                                                      "one_point")
+    result1, last_iteration1, history1, top1, top_one1 = genetic_algorithm(V[0:20],
+                                                                      c, iterations,
+                                                                      m, mutation_prob,
+                                                                      "ranking",
+                                                                      "one_point")
+    result2, last_iteration2, history2, top2, top_one2 = genetic_algorithm(V[0:20],
+                                                                      c, iterations,
+                                                                      m, mutation_prob,
+                                                                      "tournament",
+                                                                      "one_point")
+    result3, last_iteration3, history3, top3, top_one3 = genetic_algorithm(V[0:20],
+                                                                      c, iterations,
+                                                                      m, mutation_prob,
+                                                                      "roulette",
+                                                                      "two_point")
+    result4, last_iteration4, history4, top4, top_one4 = genetic_algorithm(V[0:20],
+                                                                      c, iterations,
+                                                                      m, mutation_prob,
+                                                                      "ranking",
+                                                                      "two_point")
+    result5, last_iteration5, history5, top5, top_one5 = genetic_algorithm(V[0:20],
+                                                                      c, iterations,
+                                                                      m, mutation_prob,
+                                                                      "roulette",
+                                                                      "two_point")
+
+    print(last_iteration)
     print(history)
     print(top)
+
+    # solution = knapsack_force(c, weights, values, new_n)
+    solution = knapsack.knapsack(weights, values).solve(c)
+
+    _, axs = plt.subplots(2, 3)
+    axs[0, 0].plot(history)
+    axs[0, 0].scatter([i for i in range(0, len(top))], top, color='red')
     print("best result ever ", top_one)
+    print("solution: ", solution[0])
 
-    solution = knapsack(c, weights[0:new_n], values[0:new_n], new_n)
-    print("solution: ", solution)
+    axs[0, 1].plot(history1)
+    axs[0, 1].scatter([i for i in range(0, len(top))], top1, color='red')
+    print("best result ever ", top_one1)
+    print("solution: ", solution[0])
 
-    plt.plot(history)
-    plt.scatter([i for i in range(0, len(top))], top, color='red')
+    axs[0, 2].plot(history2)
+    axs[0, 2].scatter([i for i in range(0, len(top))], top2, color='red')
+    print("best result ever ", top_one2)
+    print("solution: ", solution[0])
+
+    axs[1, 0].plot(history3)
+    axs[1, 0].scatter([i for i in range(0, len(top))], top3, color='red')
+    print("best result ever ", top_one3)
+    print("solution: ", solution[0])
+
+    axs[1, 1].plot(history4)
+    axs[1, 1].scatter([i for i in range(0, len(top))], top4, color='red')
+    print("best result ever ", top_one4)
+    print("solution: ", solution[0])
+
+    axs[1, 2].plot(history5)
+    axs[1, 2].scatter([i for i in range(0, len(top))], top5, color='red')
+    print("best result ever ", top_one5)
+    print("solution: ", solution[0])
     plt.show()
+
+
+def task2():
+    pass
 
 
 '''
