@@ -237,8 +237,8 @@ def ox(genes, n):
         part_one = first_parent[first_cross_point:second_cross_point]
         part_two = second_parent[first_cross_point:second_cross_point]
 
-        rest_one = np.concatenate([first_parent[second_cross_point:], first_parent[:first_cross_point]])
-        rest_two = np.concatenate([second_parent[second_cross_point:], first_parent[:first_cross_point]])
+        rest_one = np.concatenate([first_parent[second_cross_point:], first_parent[:second_cross_point]])
+        rest_two = np.concatenate([second_parent[second_cross_point:], first_parent[:second_cross_point]])
 
         print("rest one", rest_one)
         print("rest two", rest_two)
@@ -254,15 +254,31 @@ def ox(genes, n):
         copy_index = 0
         copy_index1 = 0
 
+        for j in range(second_cross_point, n):
+            print("copy index", copy_index, len(rest_two))
+            while rest_two[copy_index] in part_one:
+                copy_index += 1
+            first_child[j] = rest_two[copy_index]
+            copy_index += 1
+
+        for j in range(second_cross_point):
+            while rest_two[copy_index] in part_one:
+                copy_index += 1
+            first_child[j] = rest_two[copy_index]
+            copy_index += 1
+
         first_child[first_cross_point:second_cross_point] = part_one
         second_child[first_cross_point:second_cross_point] = part_two
+
+
+
 
         new_population.append(first_child)
         new_population.append(second_child)
         print("first child", first_child)
         print("second child", second_child, "\n")
 
-    return np.array(new_population)
+    return genes
 
 
 def mutation(genes, n):
@@ -322,6 +338,7 @@ def main():
     for i in range(5):
         genes = roulette_selection(genes, dist_list, start)
         genes = mutation(genes, n)
+        # genes = ox(genes, n)
         fit = fitness(genes, dist_list, start)
         fit_history.append(np.sum(fit) / m)
         top_values.append(np.max(fit))
