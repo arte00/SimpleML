@@ -56,6 +56,7 @@ def fitness(genes, distance, start):
             fit += get_distance(gene[i], gene[i + 1], distance)
         fits.append(fit)
     fits = (1 - np.array(fits) / start)
+    fits[fits < 0] = 0
     return fits
 
 
@@ -64,7 +65,6 @@ def roulette_selection(genes, v, start):
     genes_fitness = fitness(genes, v, start)
     genes_fitness_sum = np.sum(genes_fitness)
     prob = genes_fitness / genes_fitness_sum
-
     new_population = np.array([genes[np.random.choice(n, p=prob)] for _ in range(n)])
     return new_population
 
@@ -103,15 +103,22 @@ def tournament_selection(genes, v, start):
     return genes
 
 
-def pmx(genes):
+def pmx(genes, n):
     ceiling = len(genes[0])
     np.random.shuffle(genes)
 
     new_population = []
 
     for i in range(0, len(genes), 2):
-        first_parent = genes[i]
-        second_parent = genes[i + 1]
+
+        first_parent = [i for i in genes[i]]
+        second_parent = [i for i in genes[i + 1]]
+
+        if np.random.rand() < 0.75:
+            new_population.append(genes[i])
+            new_population.append(genes[i + 1])
+            continue
+
         first_cross_point = np.random.randint(ceiling)
         second_cross_point = np.random.randint(ceiling)
 
@@ -123,17 +130,46 @@ def pmx(genes):
             first_cross_point = second_cross_point
             second_cross_point = temp
 
-        first_child = 0
-        second_child = 0
+        child1 = [0 for _ in range(len(first_parent))]
+        child2 = [0 for _ in range(len(second_parent))]
 
-        new_population.append(first_child)
-        new_population.append(second_child)
+        child1[first_cross_point:second_cross_point] = first_parent[first_cross_point:second_cross_point]
+        child2[first_cross_point:second_cross_point] = second_parent[first_cross_point:second_cross_point]
+
+        '''CHILD ONE'''
+
+        for idx, x in enumerate(second_parent[first_cross_point:second_cross_point]):
+            idx += first_cross_point
+            if x not in child1:
+                while child1[idx] != 0:
+                    idx = second_parent.index(first_parent[idx])
+                child1[idx] = x
+
+        for idx in range(len(child1)):
+            if child1[idx] == 0:
+                child1[idx] = second_parent[idx]
+
+        '''CHILD TWO'''
+
+        for idx, x in enumerate(first_parent[first_cross_point:second_cross_point]):
+            idx += first_cross_point
+            if x not in child2:
+                while child2[idx] != 0:
+                    idx = first_parent.index(second_parent[idx])
+                child2[idx] = x
+
+        for idx in range(len(child2)):
+            if child2[idx] == 0:
+                child2[idx] = first_parent[idx]
+
+        new_population.append(child1)
+        new_population.append(child2)
 
     return np.array(new_population)
 
 
 def cx(genes, n):
-    ceiling = n - 1
+
     np.random.shuffle(genes)
 
     new_population = []
@@ -147,131 +183,52 @@ def cx(genes, n):
 
         first_parent = genes[i]
         second_parent = genes[i + 1]
-        first_cross_point = np.random.randint(ceiling)
-        second_cross_point = np.random.randint(ceiling)
-
-        while first_cross_point == second_cross_point:
-            second_cross_point = np.random.randint(ceiling)
-
-        if first_cross_point > second_cross_point:
-            temp = first_cross_point
-            first_cross_point = second_cross_point
-            second_cross_point = temp
 
         '''START'''
 
-        first_child = [0 for _ in range(ceiling)]
-        second_child = [0 for _ in range(ceiling)]
-
-        for j in range(first_cross_point, second_cross_point):
-            first_child[j] = first_parent[j]
-            second_child[j] = second_parent[j]
-
-        copy_len = second_cross_point - first_cross_point
-
-        first_rest = [0 for _ in range(ceiling - copy_len)]
-        second_rest = [0 for _ in range(ceiling - copy_len)]
-
-        rest_index = 0
-        for j in range(second_cross_point, ceiling):
-            first_rest[rest_index] = first_parent[j]
-            second_rest[rest_index] = second_parent[j]
-            rest_index += 1
-
-        for j in range(0, first_cross_point):
-            first_rest[rest_index] = first_parent[j]
-            second_rest[rest_index] = second_parent[j]
-            rest_index += 1
-
-        copy_index = 0
-        for j in range(0, first_cross_point):
-            first_child[j] = first_rest[copy_index]
-            second_child[j] = second_rest[copy_index]
-            copy_index += 1
-
-        for j in range(second_cross_point, ceiling):
-            first_child[j] = first_rest[copy_index]
-            second_child[j] = second_rest[copy_index]
-            copy_index += 1
-
+        first_child, second_child = cx_helper(first_parent, second_parent)
         new_population.append(first_child)
         new_population.append(second_child)
 
     return np.array(new_population)
 
 
-def ox2(genes, n):
-    ceiling = len(genes - 1)
-    np.random.shuffle(genes)
+def cx_helper(parent1_atr, parent2_atr):
 
-    new_population = []
+    parent1 = [i for i in parent1_atr]
+    parent2 = [i for i in parent2_atr]
 
-    for i in range(0, len(genes), 2):
+    curr_index = 0
+    child_one = [0 for _ in range(len(parent1))]
+    child_two = [0 for _ in range(len(parent2))]
 
-        if np.random.rand() < 0.75:
-            new_population.append(genes[i])
-            new_population.append(genes[i + 1])
-            continue
+    visited = []
+    while curr_index not in visited:
+        visited.append(curr_index)
+        curr_index = parent1.index(parent2[curr_index])
 
-        first_parent = genes[i]
-        second_parent = genes[i + 1]
+    for idx in visited:
+        child_one[idx] = parent1[idx]
 
-        first_cross_point = np.random.randint(ceiling)
-        second_cross_point = np.random.randint(ceiling)
+    for idx in range(len(child_one)):
+        if child_one[idx] == 0:
+            child_one[idx] = parent2[idx]
 
-        while first_cross_point == second_cross_point:
-            second_cross_point = np.random.randint(ceiling)
+    curr_index = 0
+    visited = []
+    while curr_index not in visited:
+        visited.append(curr_index)
+        curr_index = parent2.index(parent1[curr_index])
 
-        if first_cross_point > second_cross_point:
-            temp = first_cross_point
-            first_cross_point = second_cross_point
-            second_cross_point = temp
+    for idx in visited:
+        child_two[idx] = parent2[idx]
 
-        '''START'''
-
-        first_child = [0 for _ in range(len(genes[i]))]
-        second_child = [0 for _ in range(len(genes[i + 1]))]
-
-        part_one = first_parent[first_cross_point:second_cross_point]
-        part_two = second_parent[first_cross_point:second_cross_point]
-
-        rest_one = np.concatenate([first_parent[second_cross_point:], first_parent[:second_cross_point]])
-        rest_two = np.concatenate([second_parent[second_cross_point:], first_parent[:second_cross_point]])
-
-        print("rest one", rest_one)
-        print("rest two", rest_two)
-        print("first parent", first_parent)
-        print("second parent", second_parent)
-
-        print("indx", first_cross_point, second_cross_point)
-        print("part one", part_one)
-        print("part two", part_two)
-
-        copy_len = second_cross_point - first_cross_point
-
-        copy_index = 0
-        copy_index1 = 0
-
-        first_child[first_cross_point:second_cross_point] = part_one
-        second_child[first_cross_point:second_cross_point] = part_two
-
-        fixed_pos = list(range(first_cross_point, second_cross_point))
-
-        j = 0
-        while j < ceiling:
-            if j in fixed_pos:
-                j += 1
-                continue
-            first_child = first_parent
-
-        print("fixed_pos", fixed_pos)
-
-        new_population.append(first_child)
-        new_population.append(second_child)
-        print("first child", first_child)
-        print("second child", second_child, "\n")
-
-    return genes
+    for idx in range(len(child_one)):
+        if child_two[idx] == 0:
+            child_two[idx] = parent1[idx]
+    # print(child_one)
+    # print(child_two)
+    return child_one, child_two
 
 
 def ox(genes, n):
@@ -353,7 +310,7 @@ def mutation(genes, n):
 
     for gene in genes:
 
-        if np.random.rand() < 0.002:
+        if np.random.rand() < 0.001:
             first_cross_point = np.random.randint(ceiling)
             second_cross_point = np.random.randint(ceiling)
 
@@ -370,38 +327,67 @@ def mutation(genes, n):
     return genes
 
 
-def show_plot(fit_history, top_values, top_value):
+def show_plot(fit_history, top_values, top_value, title):
     plt.plot(fit_history)
     plt.scatter([i for i in range(0, len(top_values))], top_values)
     plt.scatter(top_value[0], top_value[1])
+    plt.title(title)
     plt.show()
 
 
-def main():
+def genetic(dist_list, n, m, it, selection, cross):
 
-    n = 30
-    m = 200
-    iterations = 50
-
-    dist_list = generate_travelling_salesman_problem(n)
     genes, start = initialize(n, m, dist_list)
     fit_history = []
     top_values = []
     top_value = [0, 0]
 
-    for i in range(iterations):
-        genes = roulette_selection(genes, dist_list, start)
+    for i in range(it):
+        if selection == 'roulette':
+            genes = roulette_selection(genes, dist_list, start)
+        elif selection == 'ranking':
+            genes = ranking_selection(genes, dist_list, start)
+        elif selection == 'tournament':
+            genes = tournament_selection(genes, dist_list, start)
+
+        if cross == 'ox':
+            genes = ox(genes, n)
+        elif cross == 'cx':
+            genes = cx(genes, n)
+        elif cross == 'pmx':
+            genes = pmx(genes, n)
+
         genes = mutation(genes, n)
-        genes = ox(genes, n)
+
         fit = fitness(genes, dist_list, start)
         fit_history.append(np.sum(fit) / m)
         top_values.append(np.max(fit))
+
         if top_values[i] > top_value[1]:
             top_value[0] = i
             top_value[1] = top_values[i]
 
-    show_plot(fit_history, top_values, top_value)
-    print("best result ever: ", top_value[1])
+    return fit_history, top_values, top_value
+
+
+def main():
+
+    selection = ['roulette', 'tournament', 'ranking']
+    cross = ['pmx', 'ox', 'cx']
+    n = 15
+    m = 500
+    it = 50
+    dist_list = generate_travelling_salesman_problem(n)
+    fig, axs = plt.subplots(3, 3)
+    for i in range(3):
+        for j in range(3):
+            history, top_values, top_value = genetic(dist_list, n, m, it, selection[i], cross[j])
+            print("top result(" + selection[i] + " + " + cross[j] + "): ", top_value[1])
+            axs[i, j].plot(history)
+            axs[i, j].scatter([i for i in range(0, len(top_values))], top_values)
+            axs[i, j].scatter(top_value[0], top_value[1])
+            axs[i, j].set_title(selection[i] + " + " + cross[j])
+    plt.show()
 
 
 if __name__ == '__main__':
